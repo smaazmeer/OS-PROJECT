@@ -1,0 +1,52 @@
+@import "tailwindcss";
+
+body {
+  margin: 0;
+  background-color: #0a0e17;
+  color: white;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* ── Themed scrollbar — WebKit (Chrome, Edge, Brave) ── */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0a0e17;
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2e374d;
+  border-radius: 999px;
+  transition: background 0.2s;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3d4a66;
+}
+
+::-webkit-scrollbar-corner {
+  background: #0a0e17;
+}
+
+/* ── Firefox scrollbar ── */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #2e374d #0a0e17;
+}
+
+/* ── Remove native spin arrows on ALL number inputs ── */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield; /* Firefox */
+  appearance: textfield;
+}

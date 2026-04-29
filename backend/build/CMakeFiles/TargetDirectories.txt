@@ -1,0 +1,3 @@
+D:/FAST/4th Semester/OS LAB/STS/gemini/Stock Trading System/backend/build/CMakeFiles/trading_server.dir
+D:/FAST/4th Semester/OS LAB/STS/gemini/Stock Trading System/backend/build/CMakeFiles/edit_cache.dir
+D:/FAST/4th Semester/OS LAB/STS/gemini/Stock Trading System/backend/build/CMakeFiles/rebuild_cache.dir
