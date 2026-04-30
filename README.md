@@ -78,63 +78,91 @@
 
 ## 📐 Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                          SYSTEM OVERVIEW                            │
-├──────────────────────┬──────────────────────┬───────────────────────┤
-│    React Frontend    │   C Backend (main)   │   Background Threads  │
-│   localhost:5173     │   localhost:8000      │                       │
-│                      │                      │  ┌─ price_updater()   │
-│  ┌──────────────┐    │  ┌────────────────┐  │  │  Updates prices     │
-│  │  Watchlist   │◄───┼──│ GET /api/stocks│  │  │  every 500ms        │
-│  │  Chart       │    │  │ GET /api/account│  │  │                     │
-│  │  Order Panel │───►┼──│ POST /api/order│  │  └─ order_processor() │
-│  │  Portfolio   │    │  │ GET /api/orders│  │    Dequeues orders     │
-│  │  History     │◄───┼──│ GET /api/history│  │    Checks LIMIT/OCO   │
-│  └──────────────┘    │  └────────┬───────┘  │    every 50ms          │
-│                      │           │           │                       │
-│  Polls every 500ms   │    OrderQueue (sem)   │   Shared State:       │
-│  via fetch()         │    ┌──────▼──────┐   │   TradingSystem{}     │
-│                      │    │ Circular    │   │   Account{}           │
-│                      │    │ Buffer[100] │   │   Stock[10]{}         │
-│                      │    └─────────────┘   │                       │
-└──────────────────────┴──────────────────────┴───────────────────────┘
-```
+<div align="center">
 
----
+<table>
+<tr>
+<td align="center" width="30%" style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:20px;">
 
-## 🗂️ Project Structure
+**🖥️ React Frontend**<br/>
+`localhost:5173`
+
+<br/>
+
+![Watchlist](https://img.shields.io/badge/Watchlist-Live_Prices-3b82f6?style=flat-square)<br/>
+![Chart](https://img.shields.io/badge/Chart-TradingView-61dafb?style=flat-square)<br/>
+![Orders](https://img.shields.io/badge/Order_Panel-Buy_%2F_Sell-10b981?style=flat-square)<br/>
+![Portfolio](https://img.shields.io/badge/Portfolio-Holdings_%26_P%2FL-f59e0b?style=flat-square)<br/>
+![History](https://img.shields.io/badge/History-Filled_%2F_Cancelled-8b5cf6?style=flat-square)
+
+<br/>
+
+*Polls every **500ms** via `fetch()`*
+
+</td>
+<td align="center" width="8%">
 
 ```
-Stock-Trading-System/
-│
-├── backend/                    ← C backend (CMake project)
-│   ├── include/
-│   │   ├── mongoose.h          ← Mongoose HTTP server (single header)
-│   │   ├── account.h           ← Account struct + function declarations
-│   │   ├── stock.h             ← Stock + Candle structs
-│   │   ├── order.h             ← Order struct + enums
-│   │   ├── order_queue.h       ← Circular buffer + semaphores
-│   │   └── trading.h           ← TradingSystem struct + thread declarations
-│   │
-│   ├── src/
-│   │   ├── main.c              ← HTTP server + API routes + main()
-│   │   ├── mongoose.c          ← Mongoose implementation (single file)
-│   │   ├── account.c           ← Balance, holdings, P/L management
-│   │   ├── stock.c             ← Price updates + candle history
-│   │   ├── order_queue.c       ← enqueue() / dequeue() with semaphores
-│   │   └── trading.c           ← Threads, order execution, OCO logic
-│   │
-│   └── CMakeLists.txt          ← Build configuration
-│
-└── trading-ui/                 ← React frontend (Vite)
-    ├── src/
-    │   ├── App.jsx             ← Main application component
-    │   ├── main.jsx            ← React entry point
-    │   └── index.css           ← Global styles + scrollbar + spinner removal
-    ├── package.json
-    └── vite.config.js
+  HTTP
+◄─────►
+fetch()
 ```
+
+</td>
+<td align="center" width="34%" style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:20px;">
+
+**⚙️ C Backend — Mongoose**<br/>
+`localhost:8000`
+
+<br/>
+
+![](https://img.shields.io/badge/GET-/api/stocks-238636?style=flat-square&logo=circle)<br/>
+![](https://img.shields.io/badge/GET-/api/account-238636?style=flat-square&logo=circle)<br/>
+![](https://img.shields.io/badge/POST-/api/order-1d4ed8?style=flat-square&logo=circle)<br/>
+![](https://img.shields.io/badge/GET-/api/orders-238636?style=flat-square&logo=circle)<br/>
+![](https://img.shields.io/badge/GET-/api/history-238636?style=flat-square&logo=circle)<br/>
+![](https://img.shields.io/badge/POST-/api/cancel-dc2626?style=flat-square&logo=circle)
+
+<br/>
+
+*Shared: `TradingSystem{}` `Account{}` `Stock[10]{}`*
+
+</td>
+<td align="center" width="8%">
+
+```
+pthread
+───────
+shared
+memory
+```
+
+</td>
+<td align="center" width="30%" style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:20px;">
+
+**🧵 Background Threads**
+
+<br/>
+
+🟢 **price_updater**<br/>
+Updates all 10 stock prices<br/>
+every **500ms** via random walk<br/><br/>
+
+🟢 **order_processor**<br/>
+Dequeues orders, checks<br/>
+LIMIT/OCO triggers every **50ms**<br/><br/>
+
+📦 **OrderQueue**<br/>
+Circular buffer — 100 slots<br/>
+`sem_t empty` + `sem_t full`<br/>
+Producer-Consumer pattern
+
+</td>
+</tr>
+</table>
+
+</div>
+
 
 ---
 
@@ -216,24 +244,7 @@ gcc --version && cmake --version && node --version && npm --version
 
 ---
 
-### Step 2 — Get Mongoose (HTTP Library)
-
-Mongoose is a single `.h` + `.c` file HTTP server. It is **not included** in this repository and must be downloaded manually.
-
-1. Go to 👉 [github.com/cesanta/mongoose/releases](https://github.com/cesanta/mongoose/releases)
-2. Download the latest release (Source code zip)
-3. From the extracted folder, copy **exactly these 2 files**:
-   - `mongoose.h` → paste into `backend/include/`
-   - `mongoose.c` → paste into `backend/src/`
-
-Your `backend/include/` folder should now have: `mongoose.h`, `account.h`, `stock.h`, `order.h`, `order_queue.h`, `trading.h`
-
-> [!NOTE]
-> Mongoose is kept separate due to its license. The system uses its HTTP and JSON parsing features only.
-
----
-
-### Step 3 — Clone This Repository
+### Step 2 — Clone This Repository
 
 ```bash
 git clone https://github.com/YOUR_USERNAME/stock-trading-system.git
@@ -242,7 +253,7 @@ cd stock-trading-system
 
 ---
 
-### Step 4 — Build the C Backend
+### Step 3 — Build the C Backend
 
 ```bash
 # Navigate to the backend folder
@@ -271,7 +282,7 @@ After a successful build you will see `trading_server.exe` (Windows) or `trading
 
 ---
 
-### Step 5 — Install Frontend Dependencies
+### Step 4 — Install Frontend Dependencies
 
 Open a **new terminal** (keep the backend terminal open):
 
@@ -279,11 +290,22 @@ Open a **new terminal** (keep the backend terminal open):
 # From the project root
 cd trading-ui
 
-# Install all npm packages
+# Install ALL frontend dependencies in one command
 npm install
 ```
 
-This installs React, Vite, Tailwind CSS, and the TradingView widgets package. It may take 1–2 minutes the first time.
+> [!NOTE]
+> `npm install` reads `package.json` and automatically installs **every** frontend dependency — you do not need to install anything individually. This includes:
+
+| Package | Version | Purpose |
+|---------|---------|---------|
+| `react` + `react-dom` | 18.x | UI framework |
+| `vite` | 5.x | Dev server + bundler |
+| `@vitejs/plugin-react` | latest | React support for Vite |
+| `tailwindcss` | 4.x | Utility CSS framework |
+| `react-ts-tradingview-widgets` | latest | TradingView charting widget |
+
+This may take **1–2 minutes** the first time as it downloads all packages into `trading-ui/node_modules/`.
 
 ---
 
@@ -483,13 +505,6 @@ CMake is not in your PATH. Re-run the CMake installer and tick "Add to PATH", or
 <summary><b>❌ cannot find -lpthread</b></summary>
 
 You are using the **win32** build of MinGW, not the **posix** build. Redownload MinGW from the releases page and pick the file with `posix` in the name.
-
-</details>
-
-<details>
-<summary><b>❌ mongoose.h: No such file or directory</b></summary>
-
-You have not placed the Mongoose files. Follow [Step 2](#step-2--get-mongoose-http-library) above — copy `mongoose.h` to `backend/include/` and `mongoose.c` to `backend/src/`.
 
 </details>
 
