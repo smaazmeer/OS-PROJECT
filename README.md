@@ -564,7 +564,7 @@ This is an IntelliSense issue, not a compiler error — your code still compiles
 | Abdullah | 24K-0822 |
 | Hassan Ahmed Siddiqui | 24K-1008 |
 
-**Course:** Operating Systems Lab — 4th Semester  
+**Course:** Operating Systems — 4th Semester  
 **Institution:** FAST-NUCES
 
 ---
